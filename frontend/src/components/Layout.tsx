@@ -58,7 +58,7 @@ export function Layout({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex h-16 items-center justify-between px-4 border-b border">
-          <h1 className="text-xl font-bold text-primary">AI Accountant</h1>
+          <h1 className="text-xl font-bold text-primary">Slis Tax AI</h1>
           <Button
             variant="ghost"
             size="icon"
@@ -117,7 +117,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold">AI Accountant</h1>
+          <h1 className="text-lg font-semibold">Slis Tax AI</h1>
           <div className="w-10" />
         </header>
 

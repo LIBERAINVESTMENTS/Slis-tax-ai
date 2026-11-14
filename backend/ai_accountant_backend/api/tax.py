@@ -1,7 +1,7 @@
 """Tax preparation & filing center — approval-gated, never claims submission without proof."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -14,8 +14,13 @@ from ai_accountant_backend.tax.engine import (
     compute_personal_income_tax,
     compute_vat,
     compute_wage_tax,
+    compute_withholding_tax,
     TaxUnverifiedError,
 )
+
+
+def _utcnow() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 router = APIRouter(tags=["tax"])
 
@@ -90,6 +95,8 @@ def calculate_tax(
             result = compute_vat(db, payload.amount, payload.rate_category or "standard", country="SR")
         elif payload.tax_type == "wage_tax":
             result = compute_wage_tax(db, payload.amount, country="SR")
+        elif payload.tax_type == "withholding_tax":
+            result = compute_withholding_tax(db, payload.amount, "dividend", country="SR")
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported tax type: {payload.tax_type}")
     except TaxUnverifiedError as exc:
@@ -143,7 +150,7 @@ def approve_tax_return(
         raise HTTPException(status_code=400, detail=f"Return already in status {ret.status}")
     ret.status = "approved"
     ret.approved_by_user_id = user.id
-    ret.approved_at = datetime.utcnow().isoformat()
+    ret.approved_at = _utcnow()
     db.commit()
     db.refresh(ret)
     return _to_out(ret)
@@ -164,7 +171,7 @@ def submit_tax_return(
     # Official e-filing integration is a stub: record that submission was prepared and authorized.
     # A real integration would call the government portal here and store the acknowledgment.
     ret.status = "submitted"
-    ret.submitted_at = datetime.utcnow().isoformat()
+    ret.submitted_at = _utcnow()
     ret.submission_proof = f"authorized_by_user_{user.id}_at_{ret.submitted_at}; e-filing integration not live (stub)"
     db.commit()
     db.refresh(ret)

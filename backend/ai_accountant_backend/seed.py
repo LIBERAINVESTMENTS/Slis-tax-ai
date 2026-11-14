@@ -1,6 +1,8 @@
 """Seed the database with a demo tenant, user, company, chart of accounts, and verified Suriname tax rules.
 
-Run: .venv\Scripts\python -m app.seed
+Run: .venv/Scripts/python -m ai_accountant_backend.seed
+
+The seed is idempotent: re-running it does not create duplicate demo data.
 """
 from __future__ import annotations
 
@@ -12,18 +14,27 @@ from ai_accountant_backend.models.chart_of_accounts import Account
 from ai_accountant_backend.models.tax_rule import TaxRule
 from ai_accountant_backend.security import hash_password
 
+_DEMO_EMAIL = "owner@demo.test"
+_DEMO_SLUG = "demo-nv"
+
 
 def seed() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Idempotency guard: skip if demo data already exists.
+        existing_user = db.query(User).filter(User.email == _DEMO_EMAIL).first()
+        if existing_user:
+            print("Seed already present; skipping.")
+            return
+
         # Demo tenant + owner user
         tenant = Tenant(name="Demo User", slug="demo-user", is_active=True)
         db.add(tenant)
         db.flush()
         user = User(
             tenant_id=tenant.id,
-            email="owner@demo.test",
+            email=_DEMO_EMAIL,
             password_hash=hash_password("password123"),
             full_name="Demo Owner",
             role="owner",
@@ -36,7 +47,7 @@ def seed() -> None:
         company = Company(
             tenant_id=tenant.id,
             name="Demo N.V.",
-            slug="demo-nv",
+            slug=_DEMO_SLUG,
             country="SR",
             currency="SRD",
             fiscal_year_start_month=1,

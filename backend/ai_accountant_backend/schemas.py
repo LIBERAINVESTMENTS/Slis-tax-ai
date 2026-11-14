@@ -123,6 +123,8 @@ class JournalEntryOut(BaseModel):
     id: int
     entry_no: str
     entry_date: str
+    reference: Optional[str] = None
+    description: Optional[str] = None
     posted: bool
     hash: str
     prev_hash: str

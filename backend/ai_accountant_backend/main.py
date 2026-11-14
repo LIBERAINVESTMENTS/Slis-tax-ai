@@ -52,13 +52,6 @@ app.include_router(ai.router, prefix=API)
 
 @app.get("/health")
 def health():
-    import ai_accountant_backend.config as cfg
-    return {
-        "status": "ok",
-        "service": settings.app_name,
-        "environment": settings.environment,
-        "config_file": cfg.__file__,
-        "config_app_name": cfg.settings.app_name,
-    }
+    return {"status": "ok", "service": settings.app_name, "environment": settings.environment}
 
 

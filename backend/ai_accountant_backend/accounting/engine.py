@@ -12,9 +12,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from ai_accountant_backend.db import get_current_company_id, get_current_tenant_id
-from ai_accountant_backend.models import Account, Company, JournalEntry, JournalLine, User
-from ai_accountant_backend.security import hash_password  # noqa: F401  (kept for symmetry)
+from ai_accountant_backend.models import Account, Company, JournalEntry, JournalLine
 
 
 class AccountingError(Exception):
@@ -62,6 +60,30 @@ def validate_entry_lines(lines: list[dict]) -> list[dict]:
     return normalized
 
 
+def _compute_entry_hash(prev_hash: str, entry: JournalEntry, lines: list[JournalLine]) -> str:
+    """Compute the tamper-evidence hash covering the full entry payload."""
+    import hashlib
+    import json
+
+    payload = {
+        "entry_no": entry.entry_no,
+        "entry_date": entry.entry_date,
+        "reference": entry.reference,
+        "description": entry.description,
+        "lines": [
+            {
+                "account_id": l.account_id,
+                "debit": l.debit,
+                "credit": l.credit,
+                "memo": l.memo,
+            }
+            for l in lines
+        ],
+    }
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256((prev_hash or "genesis").encode() + canonical).hexdigest()
+
+
 def post_entry(
     db: Session,
     *,
@@ -96,6 +118,26 @@ def post_entry(
     if db.query(JournalEntry).filter(JournalEntry.company_id == company.id, JournalEntry.entry_no == entry_no).first():
         raise AccountingError(f"Entry number {entry_no} already exists")
 
+    # Chain prev_hash to the most recent entry's hash for tamper evidence.
+    latest = (
+        db.query(JournalEntry)
+        .filter(JournalEntry.company_id == company.id)
+        .order_by(JournalEntry.id.desc())
+        .first()
+    )
+    prev_hash = latest.hash if latest else "genesis"
+
+    # Build line objects first so the tamper-evidence hash covers the complete payload.
+    line_objs = [
+        JournalLine(
+            account_id=line["account_id"],
+            debit=line["debit"],
+            credit=line["credit"],
+            memo=line["memo"],
+        )
+        for line in normalized
+    ]
+
     entry = JournalEntry(
         company_id=company.id,
         entry_no=entry_no,
@@ -104,37 +146,24 @@ def post_entry(
         description=description,
         posted=True,
         created_by=created_by,
+        prev_hash=prev_hash,
     )
-    # Chain prev_hash to the most recent entry's hash for tamper evidence BEFORE insert
-    # (the before_insert event computes hash from prev_hash).
-    latest = (
-        db.query(JournalEntry)
-        .filter(JournalEntry.company_id == company.id)
-        .order_by(JournalEntry.id.desc())
-        .first()
-    )
-    entry.prev_hash = latest.hash if latest else "genesis"
+    entry.hash = _compute_entry_hash(prev_hash, entry, line_objs)
+    entry.lines = line_objs
 
     db.add(entry)
-    db.flush()  # assign entry.id; before_insert event computes hash
-
-    for line in normalized:
-        db.add(
-            JournalLine(
-                entry_id=entry.id,
-                account_id=line["account_id"],
-                debit=line["debit"],
-                credit=line["credit"],
-                memo=line["memo"],
-            )
-        )
-
     db.commit()
     db.refresh(entry)
     return entry
 
 
-def reverse_entry(db: Session, *, entry: JournalEntry, created_by: Optional[int] = None) -> JournalEntry:
+def reverse_entry(
+    db: Session,
+    *,
+    entry: JournalEntry,
+    created_by: Optional[int] = None,
+    reversal_date: Optional[str] = None,
+) -> JournalEntry:
     """Create a reversing entry for a posted entry (never edits history)."""
     if not entry.posted:
         raise AccountingError("Only posted entries can be reversed")
@@ -151,7 +180,7 @@ def reverse_entry(db: Session, *, entry: JournalEntry, created_by: Optional[int]
         db,
         company=entry.company,
         entry_no=f"{entry.entry_no}-REV",
-        entry_date=entry.entry_date,  # caller should pass a current date; kept same for simplicity
+        entry_date=reversal_date or entry.entry_date,
         lines=lines,
         reference=entry.reference,
         description=f"Reversal of {entry.entry_no}",

@@ -6,8 +6,8 @@ import { AuthProvider } from "@/context/AuthContext"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AI Accountant",
-  description: "AI-powered accounting and financial management platform",
+  title: "Slis Tax AI",
+  description: "AI-powered accounting, tax & financial management platform",
 }
 
 export default function RootLayout({

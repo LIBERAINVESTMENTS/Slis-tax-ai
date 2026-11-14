@@ -1,36 +1,58 @@
-# AI Accountant
+# Slis Tax AI
 
-AI-powered accounting and financial management platform combining QuickBooks/Xero-style bookkeeping,
-an AI accountant, tax consultant, and CFO. Suriname tax first, with an architecture for any country.
+AI-powered accounting, tax, and financial management platform. Combines the capabilities of
+QuickBooks/Xero, a professional accountant, a tax consultant, and a CFO in one system.
+
+**Suriname tax first**, with an architecture built for adding more countries without rebuilding.
+
+## Features
+
+- **Double-entry accounting engine** — chart of accounts, general ledger, balanced journal
+  entries (debits must equal credits), immutable posted entries, period locking, tamper-evident
+  SHA-256 hash chain.
+- **Personal & business finance** — multiple companies per user, strictly isolated per tenant.
+- **Suriname tax engine** — corporate income tax (36%), VAT/BTW (10%/5%/25%/0%), personal
+  income tax, wage/payroll tax, withholding tax. Every rule records its source, effective date,
+  and verification date; unverified brackets are blocked from live calculation.
+- **AI agent workforce** — Master coordinator plus Accountant, Tax, CFO, Personal Finance,
+  Document, and Audit agents. Provider-agnostic LLM layer (OpenRouter, OpenAI, Anthropic,
+  Moonshot, DeepSeek, Ollama) with tiered routing, cost tracking, and a deterministic offline
+  `mock` provider.
+- **Tax preparation & filing center** — collect info → detect missing docs → calculate →
+  schedules → downloadable return → explicit approval → submission (never claims submission
+  without proof).
+- **Security** — JWT auth, MFA (TOTP), RBAC, multi-tenant isolation, audit logs, encrypted
+  secrets.
+- **Modern dashboard** — Next.js 15 + React 19 + Tailwind, dark/light theme, responsive.
 
 ## Stack
 
-- **Backend:** FastAPI + SQLAlchemy + Alembic, PostgreSQL + pgvector (Docker), SQLite for local dev
+- **Backend:** FastAPI + SQLAlchemy + Alembic, PostgreSQL (pgvector) via Docker, SQLite for local dev
 - **Frontend:** Next.js 15 + React 19 + Tailwind CSS
-- **AI:** Provider-agnostic LLM layer (OpenRouter, OpenAI, Anthropic, Moonshot, DeepSeek, Ollama)
-  with tiered routing, cost tracking, fallback, and a deterministic `mock` provider for offline work
-- **Money:** Python `Decimal` everywhere; every posted journal entry must balance
+- **Money:** Python `Decimal` everywhere (never floats); LLMs never do arithmetic
 
-## Quickstart — local dev (SQLite, zero dependencies)
+## Quickstart
 
-### Backend
+### Local dev (SQLite, zero dependencies)
 
 ```bash
+# Backend
 cd backend
-python -m venv --system-site-packages .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-cp .env.example .env
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\python -m alembic upgrade head
-.venv\Scripts\python -m uvicorn app.main:app --port 8000
+.venv\Scripts\python -m ai_accountant_backend.seed
+.venv\Scripts\python -m uvicorn ai_accountant_backend.main:app --port 8000
 ```
 
-### Frontend (another terminal)
-
 ```bash
+# Frontend (separate terminal)
 cd frontend
 pnpm install
-pnpm dev         # http://localhost:3000
+pnpm dev        # http://localhost:3000
 ```
+
+Sign in with the demo owner: **owner@demo.test / password123**
 
 ### Docker (Postgres + pgvector + backend + frontend)
 
@@ -47,24 +69,22 @@ cd backend
 .venv\Scripts\python -m pytest -q
 ```
 
-## What's implemented (v1 core)
-
-- Multi-tenant auth (JWT access/refresh, PBKDF2 passwords, RBAC owner/admin/employee)
-- MFA (TOTP) framework
-- Companies: multiple business entities per user, strictly isolated
-- Chart of accounts per company
-- Double-entry journal engine: every posted entry must balance (Decimal), posted entries immutable,
-  period locking, tamper-evident hash chain
-- Suriname tax engine skeleton with verifiable rules (source/effective/verification dates)
-- Audit log with tamper-evident hash chain
-- AI agent scaffolding (provider-agnostic LLM layer)
+Covers double-entry balance validation, journal reversal, Suriname tax calculations, and
+unverified-rule rejection.
 
 ## Still required to go live
 
 | Item | Status |
 |------|--------|
-| LLM API key (OpenRouter/OpenAI/Anthropic/Moonshot/DeepSeek) | Optional — mock provider works offline |
-| OCR service credentials (Document Agent) | Not configured |
+| LLM API key (OpenRouter/OpenAI/Anthropic/Moonshot/DeepSeek/Ollama) | Optional — `mock` provider works offline |
+| OCR service (AWS Textract / Azure Form Recognizer / Google Document AI) | Not configured |
 | SMTP/SMS provider (MFA delivery, notifications) | Not configured |
 | Suriname Belastingdienst e-filing credentials | Stub only |
-| Official confirmation of Suriname tax brackets above SRD 192,000, wage brackets, employer social rates, filing deadlines, accounting standards | Pending — marked `verification_status='pending'` |
+| Official confirmation of Suriname brackets above SRD 192,000, wage brackets, employer social rates, filing deadlines, accounting standards | Pending — flagged `verification_status='pending'` |
+
+**Important:** tax rules marked `pending` are never used for live calculations. Always verify
+rates against official sources before filing.
+
+## License
+
+Proprietary — all rights reserved.

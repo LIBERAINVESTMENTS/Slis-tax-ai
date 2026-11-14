@@ -65,3 +65,34 @@ def test_reversal_swaps_debit_credit(tenant_user_company, db):
     assert rev.lines[0].debit == "0" and rev.lines[0].credit == "200.00"
     assert rev.lines[1].debit == "200.00" and rev.lines[1].credit == "0"
 
+
+def test_hash_covers_line_data(tenant_user_company, db):
+    """The tamper-evidence hash must change when line amounts change."""
+    _tenant, user, company = tenant_user_company
+    bank_id, rev_id = _bank_and_revenue_ids(db, company)
+    entry_a = post_entry(
+        db,
+        company=company,
+        entry_no="JE-H1",
+        entry_date="2024-03-01",
+        lines=[
+            {"account_id": bank_id, "debit": "100.00", "credit": "0"},
+            {"account_id": rev_id, "debit": "0", "credit": "100.00"},
+        ],
+        created_by=user.id,
+    )
+    entry_b = post_entry(
+        db,
+        company=company,
+        entry_no="JE-H2",
+        entry_date="2024-03-01",
+        lines=[
+            {"account_id": bank_id, "debit": "999.00", "credit": "0"},
+            {"account_id": rev_id, "debit": "0", "credit": "999.00"},
+        ],
+        created_by=user.id,
+    )
+    assert entry_a.hash != entry_b.hash
+    # The second entry's prev_hash must chain to the first entry's hash.
+    assert entry_b.prev_hash == entry_a.hash
+

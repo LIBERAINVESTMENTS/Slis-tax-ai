@@ -42,7 +42,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">AI Accountant</CardTitle>
+          <CardTitle className="text-2xl">Slis Tax AI</CardTitle>
           <CardDescription>
             {isRegister ? "Create your account" : "Sign in to your account"}
           </CardDescription>

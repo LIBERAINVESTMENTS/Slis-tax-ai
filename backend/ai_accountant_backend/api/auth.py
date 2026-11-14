@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from ai_accountant_backend.config import settings
 from ai_accountant_backend.db import get_db
 from ai_accountant_backend.deps import get_current_user
 from ai_accountant_backend.models import Tenant, User
@@ -18,7 +19,6 @@ from ai_accountant_backend.security import (
 )
 from ai_accountant_backend.schemas import (
     LoginRequest,
-    MfaSetupRequest,
     MfaVerifyRequest,
     RefreshRequest,
     RegisterRequest,

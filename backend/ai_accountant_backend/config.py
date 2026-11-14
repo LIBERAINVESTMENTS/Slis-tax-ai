@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     )
 
     # --- Core ---
-    app_name: str = "AI Accountant"
+    app_name: str = "Slis Tax AI"
     api_prefix: str = "/api"
     environment: str = "development"  # development | test | production
     debug: bool = True
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # --- MFA ---
-    mfa_issuer: str = "AI Accountant"
+    mfa_issuer: str = "Slis Tax AI"
     mfa_window: int = 1  # TOTP validation window
 
     # --- Database ---

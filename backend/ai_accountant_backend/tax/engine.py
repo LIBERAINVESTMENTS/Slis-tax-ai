@@ -213,13 +213,7 @@ def compute_vat(db: Session, amount: Decimal, rate_category: str = "standard", c
 def compute_wage_tax(db: Session, annual_salary: Decimal, country: str = "SR") -> dict:
     annual_salary = _money(annual_salary)
     tax = Decimal("0")
-    lower = Decimal("0")
     breakdown = []
-    # Verified brackets only
-    verified_brackets = [
-        (Decimal("108000"), Decimal("0"), True),   # tax-free threshold
-        (Decimal("42000"), Decimal("8"), True),     # 8% on first SRD 42,000 above threshold
-    ]
     # Apply tax-free threshold first
     taxable = annual_salary - Decimal("108000")
     if taxable <= 0:

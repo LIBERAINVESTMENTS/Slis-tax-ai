@@ -98,3 +98,18 @@ def select_company(
     return {"company_id": company_id, "name": company.name}
 
 
+@router.delete("/companies/{company_id}", status_code=204)
+def delete_company(
+    company_id: int,
+    user: User = Depends(require_role("owner", "admin")),
+    db: Session = Depends(get_db),
+):
+    """Delete a company (owner/admin). Its accounts, journal entries, and tax data cascade."""
+    company = db.query(Company).filter(Company.id == company_id, Company.tenant_id == user.tenant_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    db.delete(company)
+    db.commit()
+    return None
+
+

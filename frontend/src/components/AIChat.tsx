@@ -16,7 +16,7 @@ interface Message {
 
 export function AIChat({ user }: { user: UserOut | null }) {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "system", content: "Welcome! I'm your AI Accountant assistant. I can help with bookkeeping, tax calculations, financial analysis, and more. Ask me anything about your finances!" }
+    { role: "system", content: "Welcome! I'm your Slis Tax AI assistant. I can help with bookkeeping, tax calculations, financial analysis, and more. Ask me anything about your finances!" }
   ])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
