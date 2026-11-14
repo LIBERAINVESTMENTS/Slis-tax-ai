@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react"
+import { createContext, useContext, useState, ReactNode } from "react"
 import { api } from "@/lib/api"
 import { UserOut } from "./types"
 
@@ -15,26 +15,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserOut | null>(null)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+function readStoredToken(): string | null {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem("access_token")
+}
 
-  useEffect(() => {
-    const token = localStorage.getItem("access_token")
-    const storedUser = localStorage.getItem("user")
-    if (token && storedUser) {
-      try {
-        setAccessToken(token)
-        setUser(JSON.parse(storedUser))
-      } catch {
-        localStorage.removeItem("access_token")
-        localStorage.removeItem("refresh_token")
-        localStorage.removeItem("user")
-      }
-    }
-    setLoading(false)
-  }, [])
+function readStoredUser(): UserOut | null {
+  if (typeof window === "undefined") return null
+  const raw = localStorage.getItem("user")
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as UserOut
+  } catch {
+    return null
+  }
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // Initialize state synchronously from localStorage so protected pages see the
+  // authenticated state on first render (no redirect race condition).
+  const [user, setUser] = useState<UserOut | null>(readStoredUser)
+  const [accessToken, setAccessToken] = useState<string | null>(readStoredToken)
+  const [loading, setLoading] = useState(false)
 
   const login = async (email: string, password: string) => {
     const data = await api.login(email, password)
@@ -46,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const register = async (email: string, password: string, fullName?: string) => {
-    const data = await api.register(email, password, fullName)
+    await api.register(email, password, fullName)
     // After registration, log in automatically
     const loginData = await api.login(email, password)
     localStorage.setItem("access_token", loginData.access_token)

@@ -13,18 +13,29 @@ import { formatMoney, formatDate } from "@/lib/utils"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs"
 
 const TAX_TYPES = [
-  { value: "corporate_income_tax", label: "Corporate Income Tax (36%)" },
-  { value: "personal_income_tax", label: "Personal Income Tax (Progressive)" },
-  { value: "vat", label: "VAT / BTW (10% standard)" },
+  { value: "corporate_income_tax", label: "Corporate Income Tax" },
+  { value: "personal_income_tax", label: "Personal Income Tax" },
+  { value: "vat", label: "VAT / Sales Tax" },
   { value: "wage_tax", label: "Wage / Payroll Tax" },
-  { value: "withholding_tax", label: "Withholding Tax" },
+  { value: "withholding_tax", label: "Dividend Withholding Tax" },
+]
+
+const COUNTRIES = [
+  { value: "SR", label: "Suriname", currency: "SRD" },
+  { value: "NL", label: "Netherlands", currency: "EUR" },
+  { value: "US", label: "United States", currency: "USD" },
+]
+
+const FILING_STATUSES = [
+  { value: "single", label: "Single" },
+  { value: "married_joint", label: "Married Filing Jointly" },
 ]
 
 const VAT_RATES = [
-  { value: "standard", label: "Standard (10%)" },
-  { value: "reduced", label: "Reduced (5%)" },
-  { value: "luxury", label: "Luxury (25%)" },
-  { value: "zero", label: "Zero / Exports (0%)" },
+  { value: "standard", label: "Standard" },
+  { value: "reduced", label: "Reduced" },
+  { value: "luxury", label: "Luxury" },
+  { value: "zero", label: "Zero / Exports" },
 ]
 
 export default function TaxPage() {
@@ -36,6 +47,8 @@ export default function TaxPage() {
   // Calculator state
   const [calcType, setCalcType] = useState("corporate_income_tax")
   const [calcAmount, setCalcAmount] = useState("")
+  const [calcCountry, setCalcCountry] = useState("SR")
+  const [filingStatus, setFilingStatus] = useState("single")
   const [vatRate, setVatRate] = useState("standard")
   const [calcResult, setCalcResult] = useState<any>(null)
   const [calcError, setCalcError] = useState("")
@@ -69,12 +82,13 @@ export default function TaxPage() {
     setCalcError("")
     setCalcLoading(true)
     try {
-      let result
-      if (calcType === "vat") {
-        result = await api.calculateTax({ tax_type: "vat", amount: calcAmount, rate_category: vatRate })
-      } else {
-        result = await api.calculateTax({ tax_type: calcType, amount: calcAmount })
-      }
+      const result = await api.calculateTax({
+        tax_type: calcType,
+        amount: calcAmount,
+        country: calcCountry,
+        filing_status: filingStatus,
+        rate_category: vatRate,
+      })
       setCalcResult(result)
     } catch (err: any) {
       setCalcError(err.message || "Calculation failed")
@@ -146,7 +160,7 @@ export default function TaxPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Tax Center</h1>
-            <p className="text-muted-foreground">Suriname tax calculations, returns & filings</p>
+            <p className="text-muted-foreground">Multi-country tax calculations, returns & filings (Suriname · Netherlands · USA)</p>
           </div>
         </div>
 
@@ -169,6 +183,19 @@ export default function TaxPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
+                    <Label>Country / Jurisdiction</Label>
+                    <select
+                      value={calcCountry}
+                      onChange={(e) => { setCalcCountry(e.target.value); setCalcResult(null); }}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      {COUNTRIES.map(c => (
+                        <option key={c.value} value={c.value}>{c.label} ({c.currency})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label>Tax Type</Label>
                     <select
                       value={calcType}
@@ -178,6 +205,19 @@ export default function TaxPage() {
                       {TAX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
+
+                  {calcCountry === "US" && calcType === "personal_income_tax" && (
+                    <div className="space-y-2">
+                      <Label>Filing Status</Label>
+                      <select
+                        value={filingStatus}
+                        onChange={(e) => setFilingStatus(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        {FILING_STATUSES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                      </select>
+                    </div>
+                  )}
 
                   {calcType === "vat" && (
                     <div className="space-y-2">
@@ -193,7 +233,7 @@ export default function TaxPage() {
                   )}
 
                   <div className="space-y-2">
-                    <Label>Amount (SRD)</Label>
+                    <Label>Amount</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -212,7 +252,7 @@ export default function TaxPage() {
 
                   {calcResult && (
                     <div className="p-4 rounded-md bg-green/10 border border-green/20 space-y-2">
-                      <h4 className="font-medium">Calculation Result</h4>
+                      <h4 className="font-medium">Calculation Result — {calcResult.calculation?.country_name || ""}</h4>
                       <div className="grid gap-2 text-sm">
                         <div className="flex justify-between">
                           <span>Tax Type:</span>
@@ -220,37 +260,39 @@ export default function TaxPage() {
                         </div>
                         <div className="flex justify-between">
                           <span>Taxable Amount:</span>
-                          <span className="font-medium">{formatMoney(calcResult.taxable_amount || calcResult.amount)}</span>
+                          <span className="font-medium">{formatMoney(calcResult.calculation?.taxable_amount || calcResult.calculation?.taxable_income || calcResult.calculation?.amount || 0, calcResult.calculation?.currency)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Rate:</span>
-                          <span className="font-medium">{calcResult.rate}%</span>
-                        </div>
-                        <div className="flex justify-between font-medium text-lg">
-                          <span>Tax Owed:</span>
-                          <span>{formatMoney(calcResult.tax_owed || calcResult.vat || calcResult.tax)}</span>
-                        </div>
-                        {calcResult.total && (
-                          <div className="flex justify-between font-medium">
-                            <span>Total (incl. tax):</span>
-                            <span>{formatMoney(calcResult.total)}</span>
+                        {calcResult.calculation?.rate && (
+                          <div className="flex justify-between">
+                            <span>Rate:</span>
+                            <span className="font-medium">{calcResult.calculation.rate}%</span>
                           </div>
                         )}
-                        {calcResult.breakdown && (
+                        <div className="flex justify-between font-medium text-lg">
+                          <span>Tax Owed:</span>
+                          <span>{formatMoney(calcResult.calculation?.tax_owed || calcResult.calculation?.vat || 0, calcResult.calculation?.currency)}</span>
+                        </div>
+                        {calcResult.calculation?.total && (
+                          <div className="flex justify-between font-medium">
+                            <span>Total (incl. tax):</span>
+                            <span>{formatMoney(calcResult.calculation.total, calcResult.calculation?.currency)}</span>
+                          </div>
+                        )}
+                        {calcResult.calculation?.breakdown && (
                           <details className="mt-2">
                             <summary className="cursor-pointer text-sm text-muted-foreground">Show bracket breakdown</summary>
                             <div className="mt-2 space-y-1 text-xs">
-                              {calcResult.breakdown.map((b: any, i: number) => (
+                              {calcResult.calculation.breakdown.map((b: any, i: number) => (
                                 <div key={i} className="flex justify-between p-2 bg-muted/50 rounded">
                                   <span>{b.from} - {b.to || "∞"} @ {b.rate}%</span>
-                                  <span>{formatMoney(b.tax)}</span>
+                                  <span>{formatMoney(b.tax, calcResult.calculation?.currency)}</span>
                                 </div>
                               ))}
                             </div>
                           </details>
                         )}
-                        {calcResult.note && (
-                          <p className="text-xs text-muted-foreground mt-2">{calcResult.note}</p>
+                        {calcResult.calculation?.note && (
+                          <p className="text-xs text-muted-foreground mt-2">{calcResult.calculation.note}</p>
                         )}
                       </div>
                     </div>
@@ -266,12 +308,12 @@ export default function TaxPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>• All calculations use <strong>verified Suriname tax rules</strong> with official sources</p>
-                  <p>• Personal income tax brackets above SRD 192,000 are <strong>unverified</strong> — not used for live calculation</p>
-                  <p>• Wage tax brackets above SRD 150,000 annual taxable are <strong>unverified</strong></p>
-                  <p>• Dividend withholding treaty rate (7.5%) is <strong>unverified</strong></p>
-                  <p>• Filing deadlines and employer social rates require official confirmation</p>
-                  <p>• <strong>Never rely on this for official filings without verification</strong></p>
+                  <p>• All calculations use <strong>verified tax rules</strong> with official sources and effective dates</p>
+                  <p>• <strong>Suriname:</strong> corporate 36%, VAT 10/5/25/0%, personal income progressive</p>
+                  <p>• <strong>Netherlands:</strong> corporate 19%/25.8%, VAT 21/9/0%, Box 1 35.82–49.50%</p>
+                  <p>• <strong>United States:</strong> corporate 21%, federal income 10–37%, FICA 7.65%</p>
+                  <p>• Suriname personal income brackets above SRD 192,000 are <strong>unverified</strong> — not used for live calculation</p>
+                  <p>• <strong>Never rely on this for official filings without verification against official sources</strong></p>
                 </CardContent>
               </Card>
             </div>

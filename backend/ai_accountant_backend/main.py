@@ -38,6 +38,7 @@ from ai_accountant_backend.api import (  # noqa: E402
     tax,
     documents,
     ai,
+    reports,
 )
 
 API = settings.api_prefix
@@ -48,6 +49,7 @@ app.include_router(journal.router, prefix=API)
 app.include_router(tax.router, prefix=API)
 app.include_router(documents.router, prefix=API)
 app.include_router(ai.router, prefix=API)
+app.include_router(reports.router, prefix=API)
 
 
 @app.get("/health")

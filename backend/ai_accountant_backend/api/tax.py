@@ -15,7 +15,9 @@ from ai_accountant_backend.tax.engine import (
     compute_vat,
     compute_wage_tax,
     compute_withholding_tax,
+    list_supported_countries,
     TaxUnverifiedError,
+    UnsupportedCountryError,
 )
 
 
@@ -29,6 +31,8 @@ class CalculateRequest(BaseModel):
     tax_type: str  # corporate_income_tax | personal_income_tax | vat | wage_tax | withholding_tax
     amount: str  # Decimal string
     rate_category: str | None = None
+    country: str = "SR"
+    filing_status: str = "single"  # US only: single | married_joint
     company_id: int | None = None
 
 
@@ -79,6 +83,12 @@ def _to_out(ret: TaxReturn) -> TaxReturnOut:
     )
 
 
+@router.get("/tax/countries")
+def get_countries():
+    """List supported tax jurisdictions."""
+    return {"countries": list_supported_countries()}
+
+
 @router.post("/tax/calculate")
 def calculate_tax(
     payload: CalculateRequest,
@@ -86,20 +96,25 @@ def calculate_tax(
     db=Depends(get_db),
 ):
     """Calculate tax obligations using verified rules (deterministic — never LLM arithmetic)."""
+    country = (payload.country or "SR").upper()
     try:
         if payload.tax_type == "corporate_income_tax":
-            result = compute_corporate_income_tax(db, payload.amount, country="SR")
+            result = compute_corporate_income_tax(db, payload.amount, country=country)
         elif payload.tax_type == "personal_income_tax":
-            result = compute_personal_income_tax(db, payload.amount, country="SR")
+            result = compute_personal_income_tax(
+                db, payload.amount, country=country, filing_status=payload.filing_status
+            )
         elif payload.tax_type == "vat":
-            result = compute_vat(db, payload.amount, payload.rate_category or "standard", country="SR")
+            result = compute_vat(db, payload.amount, payload.rate_category or "standard", country=country)
         elif payload.tax_type == "wage_tax":
-            result = compute_wage_tax(db, payload.amount, country="SR")
+            result = compute_wage_tax(db, payload.amount, country=country)
         elif payload.tax_type == "withholding_tax":
-            result = compute_withholding_tax(db, payload.amount, "dividend", country="SR")
+            result = compute_withholding_tax(db, payload.amount, "dividend", country=country)
         else:
             raise HTTPException(status_code=400, detail=f"Unsupported tax type: {payload.tax_type}")
     except TaxUnverifiedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except UnsupportedCountryError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     return {"calculation": result, "note": "Deterministic calculation from verified rules; LLM never does money math."}
 

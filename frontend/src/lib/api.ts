@@ -151,11 +151,18 @@ export const api = {
 
   // Tax
   calculateTax: (data: any) => request<any>("/tax/calculate", { method: "POST", body: JSON.stringify(data) }),
+  getTaxCountries: () => request<{ countries: Array<{ code: string; name: string; currency: string; has_vat: boolean }> }>("/tax/countries"),
   createTaxReturn: (data: any) => request<TaxReturnOut>("/tax/returns", { method: "POST", body: JSON.stringify(data) }),
   listTaxReturns: () => request<TaxReturnOut[]>("/tax/returns"),
   approveTaxReturn: (id: number) => request<TaxReturnOut>(`/tax/returns/${id}/approve`, { method: "POST" }),
   submitTaxReturn: (id: number) => request<TaxReturnOut>(`/tax/returns/${id}/submit`, { method: "POST" }),
   downloadTaxReturn: (id: number) => request<any>(`/tax/returns/${id}/download`),
+
+  // Financial reports
+  getIncomeStatement: (companyId: number) => request<any>(`/companies/${companyId}/reports/income-statement`),
+  getBalanceSheet: (companyId: number) => request<any>(`/companies/${companyId}/reports/balance-sheet`),
+  getCashFlow: (companyId: number) => request<any>(`/companies/${companyId}/reports/cash-flow`),
+  getFinancialStatements: (companyId: number) => request<any>(`/companies/${companyId}/reports`),
 
   // AI
   listAgents: () => request<any>("/ai/agents"),

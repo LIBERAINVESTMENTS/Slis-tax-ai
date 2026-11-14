@@ -21,6 +21,7 @@ import {
   PiggyBank,
   TrendingUp,
   Search,
+  BarChart3,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 
@@ -30,6 +31,7 @@ const navigation = [
   { name: "Companies", href: "/dashboard/companies", icon: Building2 },
   { name: "Chart of Accounts", href: "/dashboard/accounts", icon: BookOpen },
   { name: "Journal Entries", href: "/dashboard/journal", icon: FileText },
+  { name: "Reports", href: "/dashboard/reports", icon: BarChart3 },
   { name: "Tax Center", href: "/dashboard/tax", icon: Calculator },
   { name: "AI Assistant", href: "/dashboard/ai", icon: Brain },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
