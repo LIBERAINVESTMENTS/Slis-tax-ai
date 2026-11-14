@@ -1,0 +1,53 @@
+# AI Accountant local deployment. Postgres includes pgvector; ports are offset to avoid
+# clashing with other local Postgres/Redis instances (5433, 6380).
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: aiaccountant
+      POSTGRES_PASSWORD: aiaccountant
+      POSTGRES_DB: aiaccountant
+    ports:
+      - "5433:5432"
+    volumes:
+      - aiaccountant_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiaccountant"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      ENVIRONMENT: production
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DATABASE_URL: postgresql+psycopg2://aiaccountant:aiaccountant@db:5432/aiaccountant
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      MODEL_LIGHT: ${MODEL_LIGHT:-}
+      MODEL_STANDARD: ${MODEL_STANDARD:-}
+      MODEL_HEAVY: ${MODEL_HEAVY:-}
+      MODEL_PRICING: ${MODEL_PRICING:-}
+      ALLOWED_ORIGINS: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+volumes:
+  aiaccountant_pgdata:
