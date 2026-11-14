@@ -24,7 +24,8 @@ class Transaction(Base):
         ForeignKey("journal_entries.id"), nullable=True
     )
     source_document_id: Mapped[str | None] = mapped_column(String(200))
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
+
 
 

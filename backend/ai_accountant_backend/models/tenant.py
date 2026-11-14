@@ -14,7 +14,7 @@ class Tenant(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = created_at
+    created_at: Mapped[created_at]
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant", cascade="all, delete-orphan")
 
@@ -33,9 +33,10 @@ class User(Base):
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     totp_secret: Mapped[str | None] = mapped_column(String(200))
     mfa_recovery_codes: Mapped[str | None] = mapped_column(Text)  # JSON-encoded list of hashes
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
 
     tenant: Mapped["Tenant"] = relationship(back_populates="users")
+
 
 

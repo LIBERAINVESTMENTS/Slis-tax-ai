@@ -31,6 +31,7 @@ class TaxReturn(Base):
     submission_proof: Mapped[str | None] = mapped_column(Text)
     submitted_at: Mapped[str | None] = mapped_column(String(20), nullable=True)
     filing_deadline: Mapped[str | None] = mapped_column(String(20), nullable=True)
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
+
 

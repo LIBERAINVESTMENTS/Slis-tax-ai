@@ -23,6 +23,7 @@ class AuditLog(Base):
     # Hash chain: SHA256(prev_hash || actor || action || entity || after)
     hash: Mapped[str] = mapped_column(String(128), nullable=False)
     prev_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="genesis")
-    created_at: Mapped[datetime] = created_at
+    created_at: Mapped[created_at]
+
 
 

@@ -5,9 +5,14 @@ from contextvars import ContextVar
 from typing import Iterator
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from ai_accountant_backend.config import settings
+
+# Re-export the models' declarative base so `Base.metadata.create_all()` sees every
+# registered model. (Do NOT define a second base here — that would silently produce an
+# empty metadata and create no tables.)
+from ai_accountant_backend.models.shared import Base  # noqa: E402
 
 # Current tenant/company context for the active request. Every repository query MUST
 # filter by these so a user can never read another user's or company's rows.
@@ -26,8 +31,6 @@ engine = create_engine(
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
-
-Base = declarative_base()
 
 
 def get_db() -> Iterator[Session]:

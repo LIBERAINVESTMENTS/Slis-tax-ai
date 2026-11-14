@@ -1,11 +1,18 @@
-"""Pytest configuration: in-memory SQLite, test client, seeded tenant/company."""
+"""Pytest configuration: isolated in-memory SQLite, test client, seeded tenant/company.
+
+Tests must NEVER touch the dev database (ai-accountant.db). They use an isolated
+in-memory SQLite engine with StaticPool so every connection shares the same DB.
+"""
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from ai_accountant_backend.main import app
-from ai_accountant_backend.db import SessionLocal, engine
+from ai_accountant_backend.db import get_db
 from ai_accountant_backend.models import Base
 from ai_accountant_backend.models.tenant import Tenant, User
 from ai_accountant_backend.models.company import Company
@@ -13,15 +20,44 @@ from ai_accountant_backend.models.chart_of_accounts import Account
 from ai_accountant_backend.models.tax_rule import TaxRule
 from ai_accountant_backend.security import hash_password
 
+# Isolated in-memory SQLite engine (independent of the dev DB).
+TEST_ENGINE = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+    future=True,
+)
+
+
+@event.listens_for(TEST_ENGINE, "connect")
+def _fk_pragma(dbapi_conn, _record):
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+TestSession = sessionmaker(bind=TEST_ENGINE, autoflush=False, autocommit=False, future=True)
+
+
+def _override_get_db():
+    db = TestSession()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+app.dependency_overrides[get_db] = _override_get_db
+
 
 @pytest.fixture(scope="function")
 def db():
-    Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
+    Base.metadata.create_all(bind=TEST_ENGINE)
+    session = TestSession()
     yield session
     session.rollback()
     session.close()
-    Base.metadata.drop_all(bind=engine)
+    Base.metadata.drop_all(bind=TEST_ENGINE)
 
 
 @pytest.fixture
@@ -77,4 +113,3 @@ def tenant_user_company(db):
 @pytest.fixture
 def client():
     return TestClient(app)
-

@@ -33,8 +33,8 @@ class JournalEntry(Base):
     hash: Mapped[str] = mapped_column(String(128), nullable=False)
     prev_hash: Mapped[str] = mapped_column(String(128), nullable=False, default="genesis")
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
 
     __table_args__ = (
         UniqueConstraint("company_id", "entry_no", name="uq_journal_entry_no_per_company"),
@@ -63,3 +63,4 @@ class JournalLine(Base):
 
     entry: Mapped["JournalEntry"] = relationship(back_populates="lines")
     account: Mapped["Account"] = relationship(back_populates="journal_lines")
+

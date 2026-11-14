@@ -29,6 +29,7 @@ class TaxRule(Base):
     last_verified_date: Mapped[str | None] = mapped_column(String(20))
     verification_status: Mapped[str] = mapped_column(String(20), default="verified")  # verified | pending | outdated | proposed
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
+
 

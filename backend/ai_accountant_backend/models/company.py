@@ -22,8 +22,8 @@ class Company(Base):
     tax_regime: Mapped[str | None] = mapped_column(String(100))  # e.g. "suriname_corporate"
     period_lock_date: Mapped[str | None] = mapped_column(String(20))  # ISO date; no posting on/before
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
 
     accounts: Mapped[list["Account"]] = relationship(
         back_populates="company", cascade="all, delete-orphan"
@@ -31,5 +31,6 @@ class Company(Base):
     journal_entries: Mapped[list["JournalEntry"]] = relationship(
         back_populates="company", cascade="all, delete-orphan"
     )
+
 
 

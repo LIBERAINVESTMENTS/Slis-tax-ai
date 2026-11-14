@@ -23,10 +23,11 @@ class Account(Base):
     currency: Mapped[str] = mapped_column(String(10), default="SRD", nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = created_at
-    updated_at: Mapped[datetime] = updated_at
+    created_at: Mapped[created_at]
+    updated_at: Mapped[updated_at]
 
     company: Mapped["Company"] = relationship(back_populates="accounts")
     journal_lines: Mapped[list["JournalLine"]] = relationship(back_populates="account")
+
 
 
